@@ -33,6 +33,8 @@ class FaceTracker:
     __vcap = None
 
     def __init__(self, args, tracker=None, faceCascade=None, eyesCascade=None):
+        self.__args = args
+
         if tracker is None:
             self.Tracker = cv2.Tracker_create("KCF")
         if faceCascade is None:
@@ -40,29 +42,32 @@ class FaceTracker:
         if eyesCascade is None:
             self.__eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
 
-        if args.ipcam:
-            # vcap = cv2.VideoCapture("rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1")
-            vcap = cv2.VideoCapture(
-                "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1.sdp?real_stream--rtp-caching=100")
-        else:
-            vcap = cv2.VideoCapture(0)
-
-        vcap.set(cv2.CAP_PROP_FPS, 1)
-
-        w = vcap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        h = vcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
-        self.__vcap = vcap
-        self.__resolution = (w, h)
-        self.__args = args
+        self.initcam()
 
     def __exit__(self, exc_type, exc_value, traceback):
         # When everything is done, release the capture
         self.__vcap.release()
 
+    def initcam(self):
+        if self.__args.ipcam:
+            url = "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1.sdp?real_stream--rtp-caching=100"
+            # url = "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1"
+            self.__vcap = cv2.VideoCapture(url)
+        else:
+            self.__vcap = cv2.VideoCapture(0)
+
+        self.__vcap.set(cv2.CAP_PROP_FPS, 1)
+
+        w = self.__vcap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        h = self.__vcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+        self.__resolution = (w, h)
+
     def run(self):
         err_counter = 0
         while True:
+            if self.__args.reinit:
+                self.initcam()
             for i in range(5):
                 # Redundant read to clear buffer
                 ret, frame = self.__vcap.read()
@@ -73,7 +78,12 @@ class FaceTracker:
                     break
                 continue
 
+            if self.__args.showimage:
+                cv2.imshow('img', frame)
+
             faces = self.find_faces(frame)
+            if faces is not None:
+                print '{} faces found'.format(len(faces))
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -87,15 +97,11 @@ class FaceTracker:
             # minSize=(30, 30),
             flags=cv2.CASCADE_SCALE_IMAGE
         )
-        print '{} faces found'.format(len(faces))
-        if self.__args.showimage:
-            cv2.imshow('img', img)
 
         if len(faces) == 0:
             return
 
         for face in faces:
-            print face
             expanded = self.expand_face(face)
             print expanded
             (x, y, w, h) = expanded
@@ -150,10 +156,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     faceTracker = FaceTracker(args=args)
-    try:
-        faceTracker.run()
-    except Exception as e:
-        print 'Failed {}'.format(e.message)
+    faceTracker.run()
+
+    # try:
+    #     faceTracker.run()
+    # except Exception as e:
+    #     print 'Failed {}'.format(e.message)
 
     if args.showimage or args.showface:
         cv2.destroyAllWindows()

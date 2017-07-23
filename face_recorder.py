@@ -29,9 +29,10 @@ class FaceTracker:
     __eyesCascade = None
     __expand = (-50, -50, 50, 50)
     __resolution = None
-    __saveFace = False
+    __args = None
+    __vcap = None
 
-    def __init__(self, tracker=None, faceCascade=None, eyesCascade=None, resolution=None, saveFace=False):
+    def __init__(self, args, tracker=None, faceCascade=None, eyesCascade=None):
         if tracker is None:
             self.Tracker = cv2.Tracker_create("KCF")
         if faceCascade is None:
@@ -39,8 +40,43 @@ class FaceTracker:
         if eyesCascade is None:
             self.__eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
 
-        self.__resolution = resolution
-        self.__saveFace = saveFace
+        if args.ipcam:
+            # vcap = cv2.VideoCapture("rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1")
+            vcap = cv2.VideoCapture(
+                "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1.sdp?real_stream--rtp-caching=100")
+        else:
+            vcap = cv2.VideoCapture(0)
+
+        vcap.set(cv2.CAP_PROP_FPS, 1)
+
+        w = vcap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        h = vcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+        self.__vcap = vcap
+        self.__resolution = (w, h)
+        self.__args = args
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        # When everything is done, release the capture
+        self.__vcap.release()
+
+    def run(self):
+        err_counter = 0
+        while True:
+            for i in range(5):
+                # Redundant read to clear buffer
+                ret, frame = self.__vcap.read()
+            if not ret:
+                print "Error while reading input"
+                err_counter += 1
+                if err_counter > 10:
+                    break
+                continue
+
+            faces = self.find_faces(frame)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
     def find_faces(self, img):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -52,6 +88,8 @@ class FaceTracker:
             flags=cv2.CASCADE_SCALE_IMAGE
         )
         print '{} faces found'.format(len(faces))
+        if self.__args.showimage:
+            cv2.imshow('img', img)
 
         if len(faces) == 0:
             return
@@ -61,14 +99,14 @@ class FaceTracker:
             expanded = self.expand_face(face)
             print expanded
             (x, y, w, h) = expanded
-            crop = frame[y: y + h + 100, x: x + w + 100]
-            if self.__saveFace:
+            crop = img[y: y + h + 100, x: x + w + 100]
+            if self.__args.saveface:
                 date = datetime.datetime.now()
                 cv2.imwrite('{}.jpg'.format(date.isoformat()), crop)
-            cv2.imshow('face', crop)
+            if self.__args.showface:
+                cv2.imshow('face', crop)
             # img = cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-        # cv2.imshow('img', img)
         return faces
 
     def expand_face(self, bbox):
@@ -105,60 +143,17 @@ if __name__ == '__main__':
     # parser.add_argument('--webcam', action='store_false', dest='webcam', default=True)
     parser.add_argument('--ipcam', action='store_true', dest='ipcam', default=False)
     parser.add_argument('--save-face', action='store_true', dest='saveface', default=False)
+    parser.add_argument('--show-face', action='store_true', dest='showface', default=False)
+    parser.add_argument('--show-image', action='store_true', dest='showimage', default=False)
+    parser.add_argument('--reinit', action='store_true', dest='reinit', default=False)
 
     args = parser.parse_args()
 
-    if args.ipcam:
-        # vcap = cv2.VideoCapture("rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1")
-        vcap = cv2.VideoCapture("rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1.sdp?real_stream--rtp-caching=100")
-    else:
-        vcap = cv2.VideoCapture(0)
+    faceTracker = FaceTracker(args=args)
+    try:
+        faceTracker.run()
+    except Exception as e:
+        print 'Failed {}'.format(e.message)
 
-    errCounter = 0
-    vcap.set(cv2.CAP_PROP_FPS, 1)
-    w = vcap.get(cv2.CAP_PROP_FRAME_WIDTH)
-    h = vcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    faceTracker = FaceTracker(resolution=(w, h), saveFace=args.saveFace)
-
-    while True:
-        for i in range(5):
-            # Redundant read to clear buffer
-            ret, frame = vcap.read()
-        if not ret:
-            print "Error while reading input"
-            errCounter += 1
-            if errCounter > 10:
-                break
-            continue
-        # frame = cv2.resize(frame, (800, 680))
-        # if faceTracker.Face is None:
-        #     inited = faceTracker.init_tracker(frame)
-
-        # if inited and faceTracker.update(frame):
-        #     faceTracker.rectangle_face(frame)
-        #
-        # cv2.imshow('face', frame)
-
-        faces = faceTracker.find_faces(frame)
-
-            # for (x, y, w, h) in faces:
-            #     bbox = (x, y, w, h)
-            #     ok = tracker.init(frame, bbox)
-            #
-            #     ok, bbox = tracker.update(frame)
-            #     if ok:
-            #         p1 = (int(bbox[0]), int(bbox[1]))
-            #         p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
-            #         cv2.rectangle(frame, p1, p2, (0,0,255))
-            #
-            #     # crop = frame[y: y + h, x: x + w]
-            #     # cv2.imwrite("face.jpg", crop)
-            #     cv2.imshow('face', crop)
-
-        # cv2.imshow('VIDEO', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    # When everything is done, release the capture
-    vcap.release()
-    cv2.destroyAllWindows()
+    if args.showimage or args.showface:
+        cv2.destroyAllWindows()

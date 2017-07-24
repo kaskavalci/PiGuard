@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# note to self
+# implement threading. grab with a thread and get the latest frame from the cam
+
 import base64
 import time
 import urllib2
@@ -11,6 +14,7 @@ import argparse
 # import numpy as np
 # import boto3
 import datetime
+import threading
 
 """
 Examples of objects for image frame aquisition from both IP and
@@ -31,6 +35,7 @@ class FaceTracker:
     __resolution = None
     __args = None
     __vcap = None
+    __grabberThread = None
 
     def __init__(self, args, tracker=None, faceCascade=None, eyesCascade=None):
         self.__args = args
@@ -44,9 +49,21 @@ class FaceTracker:
 
         self.initcam()
 
+    def __enter__(self):
+        return self
+
     def __exit__(self, exc_type, exc_value, traceback):
         # When everything is done, release the capture
+        self.__grabberThread.do_grab = False
+        self.__grabberThread.join()
+
+        if self.__args.showimage or self.__args.showface:
+            cv2.destroyAllWindows()
         self.__vcap.release()
+
+    def grabber(self):
+        while getattr(self.__grabberThread, "do_grab", True):
+            self.__vcap.grab()
 
     def initcam(self):
         if self.__args.ipcam:
@@ -57,6 +74,7 @@ class FaceTracker:
             self.__vcap = cv2.VideoCapture(0)
 
         self.__vcap.set(cv2.CAP_PROP_FPS, 1)
+        self.__vcap.set(cv2.CAP_PROP_BUFFERSIZE, 3)
 
         w = self.__vcap.get(cv2.CAP_PROP_FRAME_WIDTH)
         h = self.__vcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -65,17 +83,13 @@ class FaceTracker:
 
     def run(self):
         err_counter = 0
+        self.__grabberThread = threading.Thread(target=self.grabber)
+        self.__grabberThread.start()
+
         while True:
-            if self.__args.reinit:
-                self.initcam()
-            for i in range(5):
-                # Redundant read to clear buffer
-                ret, frame = self.__vcap.read()
-            if not ret:
-                print "Error while reading input"
-                err_counter += 1
-                if err_counter > 10:
-                    break
+            retval, frame = self.__vcap.retrieve()
+            if not retval:
+                print 'error retrieving image'
                 continue
 
             if self.__args.showimage:
@@ -84,6 +98,8 @@ class FaceTracker:
             faces = self.find_faces(frame)
             if faces is not None:
                 print '{} faces found'.format(len(faces))
+
+            time.sleep(5)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -151,17 +167,13 @@ if __name__ == '__main__':
     parser.add_argument('--save-face', action='store_true', dest='saveface', default=False)
     parser.add_argument('--show-face', action='store_true', dest='showface', default=False)
     parser.add_argument('--show-image', action='store_true', dest='showimage', default=False)
-    parser.add_argument('--reinit', action='store_true', dest='reinit', default=False)
 
     args = parser.parse_args()
 
-    faceTracker = FaceTracker(args=args)
-    faceTracker.run()
+    with FaceTracker(args=args) as faceTracker:
+        faceTracker.run()
 
     # try:
     #     faceTracker.run()
     # except Exception as e:
     #     print 'Failed {}'.format(e.message)
-
-    if args.showimage or args.showface:
-        cv2.destroyAllWindows()

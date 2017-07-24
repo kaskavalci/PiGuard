@@ -102,6 +102,10 @@ class FaceTracker:
             if self.__args.showimage:
                 cv2.imshow('img', frame)
 
+            if self.__args.saveimage:
+                date = datetime.datetime.now()
+                cv2.imwrite('i_{}.jpg'.format(date.isoformat()), frame)
+
             faces = self.find_faces(frame)
             if faces is not None:
                 print '{} faces found'.format(len(faces))
@@ -170,6 +174,7 @@ if __name__ == '__main__':
     # parser.add_argument('--webcam', action='store_false', dest='webcam', default=True)
     parser.add_argument('--ipcam', action='store_true', dest='ipcam', default=False)
     parser.add_argument('--save-face', action='store_true', dest='saveface', default=False)
+    parser.add_argument('--save-image', action='store_true', dest='saveimage', default=False)
     parser.add_argument('--show-face', action='store_true', dest='showface', default=False)
     parser.add_argument('--show-image', action='store_true', dest='showimage', default=False)
 

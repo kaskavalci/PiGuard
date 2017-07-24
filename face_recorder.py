@@ -65,6 +65,8 @@ class FaceTracker:
         while getattr(self.__grabberThread, "do_grab", True):
             self.__vcap.grab()
 
+        print 'Exiting grab thread'
+
     def initcam(self):
         if self.__args.ipcam:
             url = "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1.sdp?real_stream--rtp-caching=100"
@@ -86,11 +88,16 @@ class FaceTracker:
         self.__grabberThread = threading.Thread(target=self.grabber)
         self.__grabberThread.start()
 
+        fail_count = 0
         while True:
             retval, frame = self.__vcap.retrieve()
             if not retval:
-                print 'error retrieving image'
+                fail_count += 1
                 continue
+
+            if fail_count > 1:
+                print 'failed to get image {} times'.format(fail_count)
+                fail_count = 0
 
             if self.__args.showimage:
                 cv2.imshow('img', frame)
@@ -98,8 +105,6 @@ class FaceTracker:
             faces = self.find_faces(frame)
             if faces is not None:
                 print '{} faces found'.format(len(faces))
-
-            time.sleep(5)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break

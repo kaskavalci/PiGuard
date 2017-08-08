@@ -87,8 +87,10 @@ class FaceTracker:
         logging.debug('stopping grabber thread')
         self.__grabberThread.do_grab = False
         self.__grabberThread.join()
+        logging.info('stopped grabber thread')
 
     def initcam(self):
+        logging.info('initing camera')
         if self.__args.ipcam:
             if self.__args.cache:
                 url = "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1.sdp?real_stream--rtp-caching=100"
@@ -105,17 +107,17 @@ class FaceTracker:
 
         w = self.__vcap.get(cv2.CAP_PROP_FRAME_WIDTH)
         h = self.__vcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
         self.__resolution = (w, h)
+
         self.__grabberThread = threading.Thread(target=self.grabber)
+        self.startGrabber()
+        logging.info('inited cam')
 
     def run(self):
         err_counter = 0
         fail_count = 0
 
         self.initcam()
-
-        self.startGrabber()
 
         while True:
             if fail_count > 500:

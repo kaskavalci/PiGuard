@@ -38,11 +38,12 @@ class FaceTracker:
     __args = None
     __vcap = None
     __grabberThread = None
+    __camLock = threading.Lock()
 
     def __init__(self, args, tracker=None, faceCascade=None, eyesCascade=None):
         self.__args = args
 
-        logging.basicConfig(filename='drtp.log', level=logging.DEBUG)
+        logging.basicConfig(filename='drtp.log', format='%(asctime)s %(message)s', level=logging.DEBUG)
 
         if tracker is None:
             self.Tracker = cv2.Tracker_create("KCF")
@@ -51,16 +52,15 @@ class FaceTracker:
         if eyesCascade is None:
             self.__eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
 
-        self.initcam()
-
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         # When everything is done, release the capture
         logging.info('received exit signal, quiting everything')
-        self.__grabberThread.do_grab = False
-        self.__grabberThread.join()
+        if getattr(self.__grabberThread, "do_grab", True):
+            self.__grabberThread.do_grab = False
+            self.__grabberThread.join()
         logging.info('stopping cv2 instances')
         if self.__args.showimage or self.__args.showface:
             cv2.destroyAllWindows()
@@ -69,12 +69,24 @@ class FaceTracker:
 
     def grabber(self):
         i = 0
+        logging.debug('grabber thread started')
         while getattr(self.__grabberThread, "do_grab", True):
+            self.__camLock.acquire()
             self.__vcap.grab()
+            self.__camLock.release()
             logging.debug('grabbed frame {}'.format(i))
             i += 1
 
-        logging.info('Exiting grab thread')
+        logging.info('grab thread finished')
+
+    def startGrabber(self):
+        logging.debug('starting grabber thread')
+        self.__grabberThread.start()
+
+    def stopGrabber(self):
+        logging.debug('stopping grabber thread')
+        self.__grabberThread.do_grab = False
+        self.__grabberThread.join()
 
     def initcam(self):
         if self.__args.ipcam:
@@ -95,15 +107,25 @@ class FaceTracker:
         h = self.__vcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
         self.__resolution = (w, h)
+        self.__grabberThread = threading.Thread(target=self.grabber)
 
     def run(self):
         err_counter = 0
-        self.__grabberThread = threading.Thread(target=self.grabber)
-        self.__grabberThread.start()
-
         fail_count = 0
+
+        self.initcam()
+
+        self.startGrabber()
+
         while True:
+            if fail_count > 500:
+                logging.info('too many failures. reiniting cam')
+                self.stopGrabber()
+                self.initcam()
+                fail_count = 0
+            self.__camLock.acquire()
             retval, frame = self.__vcap.retrieve()
+            self.__camLock.release()
             if not retval:
                 fail_count += 1
                 continue

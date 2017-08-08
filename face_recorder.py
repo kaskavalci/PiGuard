@@ -9,12 +9,14 @@ import urllib2
 
 import cv2
 import operator
-# import sys
+import sys
+import os
 import argparse
 # import numpy as np
 # import boto3
 import datetime
 import threading
+import logging
 
 """
 Examples of objects for image frame aquisition from both IP and
@@ -40,6 +42,8 @@ class FaceTracker:
     def __init__(self, args, tracker=None, faceCascade=None, eyesCascade=None):
         self.__args = args
 
+        logging.basicConfig(filename='drtp.log', level=logging.DEBUG)
+
         if tracker is None:
             self.Tracker = cv2.Tracker_create("KCF")
         if faceCascade is None:
@@ -54,26 +58,35 @@ class FaceTracker:
 
     def __exit__(self, exc_type, exc_value, traceback):
         # When everything is done, release the capture
+        logging.info('received exit signal, quiting everything')
         self.__grabberThread.do_grab = False
         self.__grabberThread.join()
-
+        logging.info('stopping cv2 instances')
         if self.__args.showimage or self.__args.showface:
             cv2.destroyAllWindows()
         self.__vcap.release()
+        logging.info('RIP')
 
     def grabber(self):
+        i = 0
         while getattr(self.__grabberThread, "do_grab", True):
             self.__vcap.grab()
+            logging.debug('grabbed frame {}'.format(i))
+            i += 1
 
-        print 'Exiting grab thread'
+        logging.info('Exiting grab thread')
 
     def initcam(self):
         if self.__args.ipcam:
-            url = "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1.sdp?real_stream--rtp-caching=100"
-            # url = "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1"
+            if self.__args.cache:
+                url = "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1.sdp?real_stream--rtp-caching=100"
+            else:
+                url = "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1.sdp"
             self.__vcap = cv2.VideoCapture(url)
+            logging.info('IPcam set to {}'.format(url))
         else:
             self.__vcap = cv2.VideoCapture(0)
+            logging.info('using webcam')
 
         self.__vcap.set(cv2.CAP_PROP_FPS, 1)
         self.__vcap.set(cv2.CAP_PROP_BUFFERSIZE, 3)
@@ -96,7 +109,7 @@ class FaceTracker:
                 continue
 
             if fail_count > 1:
-                print 'failed to get image {} times'.format(fail_count)
+                logging.info('failed to get image {} times'.format(fail_count))
                 fail_count = 0
 
             if self.__args.showimage:
@@ -104,11 +117,11 @@ class FaceTracker:
 
             if self.__args.saveimage:
                 date = datetime.datetime.now()
-                cv2.imwrite('i_{}.jpg'.format(date.isoformat()), frame)
+                cv2.imwrite('images/i_{}.jpg'.format(date.isoformat()), frame)
 
             faces = self.find_faces(frame)
             if faces is not None:
-                print '{} faces found'.format(len(faces))
+                logging.info('{} faces found'.format(len(faces)))
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -128,12 +141,12 @@ class FaceTracker:
 
         for face in faces:
             expanded = self.expand_face(face)
-            print expanded
+            logging.info("exanped: " + str(expanded))
             (x, y, w, h) = expanded
             crop = img[y: y + h + 100, x: x + w + 100]
             if self.__args.saveface:
                 date = datetime.datetime.now()
-                cv2.imwrite('{}.jpg'.format(date.isoformat()), crop)
+                cv2.imwrite('images/{}.jpg'.format(date.isoformat()), crop)
             if self.__args.showface:
                 cv2.imshow('face', crop)
             # img = cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
@@ -173,6 +186,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Face Tracker')
     # parser.add_argument('--webcam', action='store_false', dest='webcam', default=True)
     parser.add_argument('--ipcam', action='store_true', dest='ipcam', default=False)
+    parser.add_argument('--cache', action='store_true', dest='cache', default=False)
     parser.add_argument('--save-face', action='store_true', dest='saveface', default=False)
     parser.add_argument('--save-image', action='store_true', dest='saveimage', default=False)
     parser.add_argument('--show-face', action='store_true', dest='showface', default=False)
@@ -181,7 +195,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     with FaceTracker(args=args) as faceTracker:
-        faceTracker.run()
+        try:
+            faceTracker.run()
+        except KeyboardInterrupt:
+            print 'Interrupted'
+            try:
+                sys.exit(0)
+            except SystemExit:
+                os._exit(0)
 
     # try:
     #     faceTracker.run()

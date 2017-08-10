@@ -8,6 +8,7 @@ import time
 import urllib2
 
 import cv2
+import imutils
 import operator
 import sys
 import os
@@ -39,6 +40,7 @@ class FaceTracker:
     __vcap = None
     __grabberThread = None
     __camLock = threading.Lock()
+    __previousFrame = None
 
     def __init__(self, args, tracker=None, faceCascade=None, eyesCascade=None):
         self.__args = args
@@ -89,6 +91,32 @@ class FaceTracker:
         self.__grabberThread.join()
         logging.info('stopped grabber thread')
 
+    def isThereMotion(self, frame):
+        blur = cv2.GaussianBlur(frame, (21, 21), 0)
+        if self.__previousFrame is None:
+            self.__previousFrame = blur
+            return True
+
+        # compute the absolute difference between the current frame and
+        # first frame
+        frameDelta = cv2.absdiff(self.__previousFrame, blur)
+        thresh = cv2.threshold(frameDelta, 25, 255, cv2.THRESH_BINARY)[1]
+
+        # dilate the thresholded image to fill in holes, then find contours
+        # on thresholded image
+        thresh = cv2.dilate(thresh, None, iterations=2)
+        _, contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        self.__previousFrame = blur
+
+        cv2.imshow('blur', blur)
+
+        if len(contours) > 0:
+            logging.debug('motion detected')
+            return True
+
+        logging.debug('no motion found')
+        return False
+
     def initcam(self):
         logging.info('initing camera')
         if self.__args.ipcam:
@@ -116,15 +144,17 @@ class FaceTracker:
     def run(self):
         err_counter = 0
         fail_count = 0
+        motionless_count = 0
 
         self.initcam()
 
         while True:
-            if fail_count > 500:
-                logging.info('too many failures. reiniting cam')
+            if fail_count > 500 or motionless_count > 500:
+                logging.info('too many failures or no motion. reiniting cam')
                 self.stopGrabber()
                 self.initcam()
                 fail_count = 0
+                motionless_count= 0
             self.__camLock.acquire()
             retval, frame = self.__vcap.retrieve()
             self.__camLock.release()
@@ -136,14 +166,21 @@ class FaceTracker:
                 logging.info('failed to get image {} times'.format(fail_count))
                 fail_count = 0
 
+            img = imutils.resize(frame, width=500)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
             if self.__args.showimage:
                 cv2.imshow('img', frame)
+
+            if not self.isThereMotion(gray):
+                motionless_count += 1
+                continue
 
             if self.__args.saveimage:
                 date = datetime.datetime.now()
                 cv2.imwrite('images/i_{}.jpg'.format(date.isoformat()), frame)
 
-            faces = self.find_faces(frame)
+            faces = self.find_faces(gray)
             if faces is not None:
                 logging.info('{} faces found'.format(len(faces)))
 
@@ -151,9 +188,8 @@ class FaceTracker:
                 break
 
     def find_faces(self, img):
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         faces = self.__faceCascade.detectMultiScale(
-            gray,
+            img,
             scaleFactor=1.1,
             minNeighbors=5,
             # minSize=(30, 30),
@@ -215,6 +251,8 @@ if __name__ == '__main__':
     parser.add_argument('--save-image', action='store_true', dest='saveimage', default=False)
     parser.add_argument('--show-face', action='store_true', dest='showface', default=False)
     parser.add_argument('--show-image', action='store_true', dest='showimage', default=False)
+    parser.add_argument('--min-area', type=int, dest='minarea', default=600)
+
 
     args = parser.parse_args()
 

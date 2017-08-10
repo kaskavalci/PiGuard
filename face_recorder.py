@@ -108,8 +108,6 @@ class FaceTracker:
         _, contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         self.__previousFrame = blur
 
-        cv2.imshow('blur', blur)
-
         if len(contours) > 0:
             logging.debug('motion detected')
             return True

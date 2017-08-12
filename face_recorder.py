@@ -164,7 +164,7 @@ class FaceTracker:
                 logging.info('failed to get image {} times'.format(fail_count))
                 fail_count = 0
 
-            img = imutils.resize(frame, width=500)
+            img = imutils.resize(frame, height=1024, width=600)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
             if self.__args.showimage:

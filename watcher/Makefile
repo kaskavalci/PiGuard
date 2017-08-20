@@ -2,4 +2,4 @@ build:
 	docker build -t watcher .
 
 run: build
-	docker run --net host watcher
+	docker run -it --net host watcher

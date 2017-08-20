@@ -4,11 +4,13 @@ import bluetooth
 import datetime
 from werkzeug.wrappers import Request, Response
 import json
+import logging
 
 mac_list = []
 
 
 def check(mac):
+    logging.debug('checking mac address ' + mac)
     result = bluetooth.lookup_name(mac, timeout=3)
     if result is None:
         return "out"
@@ -22,11 +24,14 @@ def application(request):
     for mac in mac_list:
         status = check(mac)
         in_out_list[mac] = {"timestamp": str(datetime.datetime.now()), "status": status}
+    logging.debug(str(in_out_list))
     return Response(json.dumps(in_out_list))
 
 if __name__ == '__main__':
+    logging.basicConfig(filename='watcher.log', format='%(asctime)s %(message)s', level=logging.DEBUG)
     f = open('mac_list.txt', 'r')
     for line in f:
+        logging.info('mac address read: ' + line)
         mac_list.append(line)
 
     from werkzeug.serving import run_simple

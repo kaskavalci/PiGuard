@@ -31,8 +31,11 @@ if __name__ == '__main__':
     logging.basicConfig(filename='watcher.log', format='%(asctime)s %(message)s', level=logging.DEBUG)
     f = open('mac_list.txt', 'r')
     for line in f:
-        logging.info('mac address read: ' + line)
-        mac_list.append(line)
+        mac = line.strip()
+        if mac == '':
+            continue
+        logging.info('mac address read: ' + mac)
+        mac_list.append(mac)
 
     from werkzeug.serving import run_simple
     run_simple('0', 4000, application)

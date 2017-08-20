@@ -30,5 +30,4 @@ if __name__ == '__main__':
         mac_list.append(line)
 
     from werkzeug.serving import run_simple
-    run_simple('localhost', 4000, application)
-
+    run_simple('0', 4000, application)

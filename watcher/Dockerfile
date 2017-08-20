@@ -4,4 +4,4 @@ RUN pip install Werkzeug
 
 ADD . /
 
-RUN watcher.py
+CMD python watcher.py

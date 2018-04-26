@@ -8,7 +8,6 @@ import time
 import urllib2
 
 import cv2
-import imutils
 import operator
 import sys
 import os
@@ -18,6 +17,7 @@ import argparse
 import datetime
 import threading
 import logging
+import requests
 
 """
 Examples of objects for image frame aquisition from both IP and
@@ -48,7 +48,8 @@ class FaceTracker:
         logging.basicConfig(filename='drtp.log', format='%(asctime)s %(message)s', level=logging.DEBUG)
 
         if tracker is None:
-            self.Tracker = cv2.Tracker_create("KCF")
+            # self.Tracker = cv2.Tracker_create("KCF")
+            self.Tracker = cv2.TrackerKCF_create()
         if faceCascade is None:
             self.__faceCascade = cv2.CascadeClassifier('haarcascade_frontalface_alt.xml')
         if eyesCascade is None:
@@ -164,7 +165,7 @@ class FaceTracker:
                 logging.info('failed to get image {} times'.format(fail_count))
                 fail_count = 0
 
-            img = imutils.resize(frame, height=1024, width=600)
+            img = cv2.resize(frame, (1024, 600))
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
             if self.__args.showimage:
@@ -202,11 +203,25 @@ class FaceTracker:
             logging.info("exanped: " + str(expanded))
             (x, y, w, h) = expanded
             crop = img[y: y + h + 100, x: x + w + 100]
+            date = datetime.datetime.now()
+            fname = 'images/{}.jpg'.format(date.isoformat())
             if self.__args.saveface:
-                date = datetime.datetime.now()
-                cv2.imwrite('images/{}.jpg'.format(date.isoformat()), crop)
+                cv2.imwrite(fname, crop)
             if self.__args.showface:
                 cv2.imshow('face', crop)
+            if self.__args.upload:
+
+                if not self.__args.saveface:
+                    cv2.imwrite(fname, crop)
+                with open(fname) as fh:
+                    logging.info('sending data to client')
+                    mydata = fh.read()
+                    response = requests.put('http://localhost:8080/',
+                                            data=mydata,
+                                            headers={'content-type': 'image/jpeg'},
+                                            )
+                    if response.status_code != 204:
+                        logging.error('failed to send picture to server: {}'.format(response.content))
             # img = cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
         return faces
@@ -247,6 +262,7 @@ if __name__ == '__main__':
     parser.add_argument('--cache', action='store_true', dest='cache', default=False)
     parser.add_argument('--save-face', action='store_true', dest='saveface', default=False)
     parser.add_argument('--save-image', action='store_true', dest='saveimage', default=False)
+    parser.add_argument('--upload', action='store_true', dest='upload', default=False)
     parser.add_argument('--show-face', action='store_true', dest='showface', default=False)
     parser.add_argument('--show-image', action='store_true', dest='showimage', default=False)
     parser.add_argument('--min-area', type=int, dest='minarea', default=600)

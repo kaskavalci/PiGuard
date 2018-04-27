@@ -8,6 +8,7 @@ from os.path import join
 from os import environ
 import boto3
 import uuid
+import socket
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 
 AWS_ACCESS_KEY_ID = environ['AWS_ACCESS_KEY_ID']
@@ -100,4 +101,4 @@ def run_on(addr, port):
 
 
 if __name__ == '__main__':
-    run_on('localhost', 8080)
+    run_on(socket.gethostname(), 8080)

@@ -2,86 +2,102 @@
 
 import face_recognition
 import cv2
+import numpy as np
 from os import listdir
 from os.path import join
+from os import environ
+import boto3
+import uuid
+from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 
-video_capture = cv2.VideoCapture(0)
-
-# Load known pictures
-known_images_path = "known_images"
-known_images_encoding = []
-names = []
-
-for f in listdir(known_images_path):
-    print f
-    names.append(f)
-    image = face_recognition.load_image_file(join(known_images_path, f))
-    known_images_encoding.append(face_recognition.face_encodings(image)[0])
+AWS_ACCESS_KEY_ID = environ['AWS_ACCESS_KEY_ID']
+AWS_SECRET_ACCESS_KEY = environ['AWS_SECRET_ACCESS_KEY']
+AWS_REGION = 'eu-west-1'
+AWS_S3_BUCKET = 'unrecognized-faces'
 
 
-# Initialize some variables
-face_locations = []
-face_encodings = []
-face_names = []
-process_this_frame = True
+class Recognizer():
+    # Initialize some variables
+    known_images_encoding = []
+    names = []
 
-while True:
-    # Grab a single frame of video
-    ret, frame = video_capture.read()
+    def __init__(self):
+        # Load known pictures
+        known_images_path = "known_images"
 
-    # Resize frame of video to 1/4 size for faster face recognition processing
-    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+        for f in listdir(known_images_path):
+            print f
+            self.names.append(f)
+            image = face_recognition.load_image_file(join(known_images_path, f))
+            self.known_images_encoding.append(face_recognition.face_encodings(image)[0])
 
-    # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
-    rgb_small_frame = small_frame[:, :, ::-1]
+    def upload(self, image):
+        filename = str(uuid.uuid4()) + ".jpg"
+        path = "unrecognized/" + filename
+        cv2.imwrite(path, image)
 
-    # Only process every other frame of video to save time
-    if process_this_frame:
+        # Create an S3 client
+        s3 = boto3.client('s3',
+                          aws_access_key_id=AWS_ACCESS_KEY_ID,
+                          aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+                          region_name=AWS_REGION)
+
+        # Uploads the given file using a managed uploader, which will split up large
+        # files automatically and upload parts in parallel.
+        print "uploading file " + filename + " to s3 now"
+        s3.upload_file(path, AWS_S3_BUCKET, filename)
+
+    def recognize(self, frame, small_frame):
         # Find all the faces and face encodings in the current frame of video
-        face_locations = face_recognition.face_locations(rgb_small_frame)
-        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+        face_locations = face_recognition.face_locations(small_frame)
+        face_encodings = face_recognition.face_encodings(small_frame, face_locations)
 
         face_names = []
         for face_encoding in face_encodings:
             # See if the face is a match for the known face(s)
-            match = face_recognition.compare_faces(known_images_encoding, face_encoding)
+            match = face_recognition.compare_faces(self.known_images_encoding, face_encoding)
             name = "Unknown"
 
             print match
-
+            found = False
             for i, m in enumerate(match):
                 if m:
-                    name = names[i]
+                    name = self.names[i]
+                    found = True
+            if not found:
+                self.upload(frame)
 
             face_names.append(name)
 
-    process_this_frame = not process_this_frame
+        return face_names
 
 
-    # Display the results
-    for (top, right, bottom, left), name in zip(face_locations, face_names):
-        # Scale back up face locations since the frame we detected in was scaled to 1/4 size
-        top *= 4
-        right *= 4
-        bottom *= 4
-        left *= 4
+class PUTHandler(BaseHTTPRequestHandler):
+    recognizer = None
 
-        # Draw a box around the face
-        cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
+    def do_PUT(self):
+        print self.headers
+        if 'Content-Type' not in self.headers or self.headers['Content-Type'] not in ["image/jpeg", "image/jpg"]:
+            print "we only accept image/jpeg types"
+            self.send_response(500)
+            return
+        length = int(self.headers['Content-Length'])
+        d = self.rfile.read(length)
+        with open('image.jpg', 'wb') as fh:
+            fh.write(d)
+        content = cv2.imread('image.jpg')
+        names = self.recognizer.recognize(content, content)
+        print names
+        self.send_response(204)
 
-        # Draw a label with a name below the face
-        cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.cv.CV_FILLED)
-        font = cv2.FONT_HERSHEY_DUPLEX
-        cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
 
-    # Display the resulting image
-    cv2.imshow('Video', frame)
+def run_on(addr, port):
+    print("Starting a server on port %s:%i" % (addr, port))
+    server_address = (addr, port)
+    PUTHandler.recognizer = Recognizer()
+    httpd = HTTPServer(server_address, PUTHandler)
+    httpd.serve_forever()
 
-    # Hit 'q' on the keyboard to quit!
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
 
-# Release handle to the webcam
-video_capture.release()
-cv2.destroyAllWindows()
-
+if __name__ == '__main__':
+    run_on('localhost', 8080)

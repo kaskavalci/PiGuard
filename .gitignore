@@ -1,1 +1,4 @@
 known_images
+venv
+images
+*.log

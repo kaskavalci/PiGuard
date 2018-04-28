@@ -2,7 +2,6 @@
 
 import face_recognition
 import cv2
-import numpy as np
 from os import listdir
 from os.path import join
 from os import environ

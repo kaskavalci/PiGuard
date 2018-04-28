@@ -48,8 +48,8 @@ class FaceTracker:
         logging.basicConfig(filename='drtp.log', format='%(asctime)s %(message)s', level=logging.DEBUG)
 
         if tracker is None:
-            # self.Tracker = cv2.Tracker_create("KCF")
-            self.Tracker = cv2.TrackerKCF_create()
+            self.Tracker = cv2.Tracker_create("KCF")
+            # self.Tracker = cv2.TrackerKCF_create()
         if faceCascade is None:
             self.__faceCascade = cv2.CascadeClassifier('haarcascade_frontalface_alt.xml')
         if eyesCascade is None:

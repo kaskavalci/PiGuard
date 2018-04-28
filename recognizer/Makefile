@@ -9,5 +9,6 @@ run:
 		-e "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" \
 		-d \
 		--restart=unless-stopped \
+		-p 8080:8080
 		recognizer
 

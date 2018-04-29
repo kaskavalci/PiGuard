@@ -4,17 +4,17 @@ import face_recognition
 import cv2
 from os import listdir
 from os.path import join
-from os import environ
+from os import getenv
 from os import remove
 import boto3
 import uuid
 import socket
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 
-AWS_ACCESS_KEY_ID = environ['AWS_ACCESS_KEY_ID']
-AWS_SECRET_ACCESS_KEY = environ['AWS_SECRET_ACCESS_KEY']
-AWS_REGION = 'eu-west-1'
-AWS_S3_BUCKET = 'unrecognized-faces-1'
+AWS_ACCESS_KEY_ID = os.getenv['AWS_ACCESS_KEY_ID']
+AWS_SECRET_ACCESS_KEY = os.getenv['AWS_SECRET_ACCESS_KEY']
+AWS_REGION = os.getenv('AWS_DEFAULT_REGION', 'eu-west-1')
+AWS_S3_BUCKET = os.getenv('AWS_S3_BUCKET', 'unrecognized-faces-1')
 
 class Recognizer():
     # Initialize some variables
@@ -102,4 +102,6 @@ def run_on(addr, port):
 
 
 if __name__ == '__main__':
+    if AWS_S3_BUCKET == "":
+        AWS_S3_BUCKET =
     run_on(socket.gethostname(), 8080)

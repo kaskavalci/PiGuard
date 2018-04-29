@@ -11,10 +11,10 @@ import uuid
 import socket
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 
-AWS_ACCESS_KEY_ID = os.getenv['AWS_ACCESS_KEY_ID']
-AWS_SECRET_ACCESS_KEY = os.getenv['AWS_SECRET_ACCESS_KEY']
-AWS_REGION = os.getenv('AWS_DEFAULT_REGION', 'eu-west-1')
-AWS_S3_BUCKET = os.getenv('AWS_S3_BUCKET', 'unrecognized-faces-1')
+AWS_ACCESS_KEY_ID = getenv['AWS_ACCESS_KEY_ID']
+AWS_SECRET_ACCESS_KEY = getenv['AWS_SECRET_ACCESS_KEY']
+AWS_REGION = getenv('AWS_DEFAULT_REGION', 'eu-west-1')
+AWS_S3_BUCKET = getenv('AWS_S3_BUCKET', 'unrecognized-faces-1')
 
 class Recognizer():
     # Initialize some variables

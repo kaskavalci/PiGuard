@@ -12,3 +12,6 @@ run:
 		-p 8080:8080 \
 		recognizer
 
+get:
+	mkdir -p ./known_images
+	aws s3 cp s3://known-faces ./known_images/ --recursive

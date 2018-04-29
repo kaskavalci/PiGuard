@@ -5,6 +5,7 @@ import cv2
 from os import listdir
 from os.path import join
 from os import environ
+from os import remove
 import boto3
 import uuid
 import socket
@@ -82,11 +83,13 @@ class PUTHandler(BaseHTTPRequestHandler):
             return
         length = int(self.headers['Content-Length'])
         d = self.rfile.read(length)
-        with open('image.jpg', 'wb') as fh:
+        image_name = str(uuid.uuid4()) + ".jpg"
+        with open(image_name, 'wb') as fh:
             fh.write(d)
-        content = cv2.imread('image.jpg')
+        content = cv2.imread(image_name)
         names = self.recognizer.recognize(content, content)
         print names
+        remove(image_name)
         self.send_response(204)
 
 

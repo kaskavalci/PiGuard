@@ -11,7 +11,7 @@ run:
 		--restart=unless-stopped \
 		-p 8080:8080 \
 		-v known_images:/recognizer/known_images \
-		-v unrecognized:/recognizer/unrecognized
+		-v unrecognized:/recognizer/unrecognized \
 		recognizer
 
 get:

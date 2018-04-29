@@ -2,3 +2,5 @@ known_images
 venv
 images
 *.log
+.idea
+.vscode

@@ -216,7 +216,7 @@ class FaceTracker:
                 with open(fname) as fh:
                     logging.info('sending data to client')
                     mydata = fh.read()
-                    response = requests.put('http://192.168.1.134:8082/',
+                    response = requests.put('http://192.168.1.129:8082/',
                                             data=mydata,
                                             headers={'content-type': 'image/jpeg'},
                                             )

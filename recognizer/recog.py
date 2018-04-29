@@ -102,6 +102,4 @@ def run_on(addr, port):
 
 
 if __name__ == '__main__':
-    if AWS_S3_BUCKET == "":
-        AWS_S3_BUCKET =
     run_on(socket.gethostname(), 8080)

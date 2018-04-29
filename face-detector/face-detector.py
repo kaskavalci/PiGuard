@@ -45,7 +45,7 @@ class FaceTracker:
     def __init__(self, args, tracker=None, faceCascade=None, eyesCascade=None):
         self.__args = args
 
-        logging.basicConfig(filename='drtp.log', format='%(asctime)s %(message)s', level=logging.DEBUG)
+        logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
 
         if tracker is None:
             self.Tracker = cv2.Tracker_create("KCF")

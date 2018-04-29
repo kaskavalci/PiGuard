@@ -13,8 +13,7 @@ from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 AWS_ACCESS_KEY_ID = environ['AWS_ACCESS_KEY_ID']
 AWS_SECRET_ACCESS_KEY = environ['AWS_SECRET_ACCESS_KEY']
 AWS_REGION = 'eu-west-1'
-AWS_S3_BUCKET = 'unrecognized-faces'
-
+AWS_S3_BUCKET = 'unrecognized-faces-1'
 
 class Recognizer():
     # Initialize some variables

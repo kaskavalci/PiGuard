@@ -216,13 +216,17 @@ class FaceTracker:
                 with open(fname) as fh:
                     logging.info('sending data to client')
                     mydata = fh.read()
-                    response = requests.put('http://192.168.1.129:8082/',
-                                            data=mydata,
-                                            headers={'content-type': 'image/jpeg'},
-                                            )
-                    if response.status_code != 204:
-                        logging.error('failed to send picture to server: {}'.format(response.content))
-            # img = cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+                    try:
+                        response = requests.put('http://192.168.1.129:8082/',
+                                                data=mydata,
+                                                headers={'content-type': 'image/jpeg'},
+                                                )
+                        if response.status_code != 204:
+                            logging.error('failed to send picture to server: {}'.format(response.content))
+                    except:
+                        print("web server is not available")
+
+                    # img = cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
         return faces
 

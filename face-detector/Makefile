@@ -5,7 +5,7 @@ run:
 	docker run \
 	    -d \
 	    --restart=unless-stopped \
-		-v images:/face-detector/images \
+		-v `pwd`/images:/face-detector/images \
 		face-detector
 
 build:

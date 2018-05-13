@@ -3,4 +3,5 @@ FROM rickryan/rpi-jessie-opencv3.2
 ADD . /face-detector/
 WORKDIR /face-detector
 
-CMD ["./face-detector.py", "--upload", "--ipcam", "--save-face"]
+ENTRYPOINT [ "python", "./face-detector.py" ]
+CMD ["--upload", "--ipcam", "--save-face", "--save-image"]

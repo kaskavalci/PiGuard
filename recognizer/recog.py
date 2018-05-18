@@ -9,6 +9,7 @@ from os import remove
 import boto3
 import uuid
 import socket
+import time
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 
 AWS_ACCESS_KEY_ID = getenv('AWS_ACCESS_KEY_ID')
@@ -35,7 +36,6 @@ class Recognizer():
         filename = str(uuid.uuid4()) + ".jpg"
         path = "unrecognized/" + filename
         cv2.imwrite(path, image)
-
         # Create an S3 client
         s3 = boto3.client('s3',
                           aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -76,21 +76,27 @@ class PUTHandler(BaseHTTPRequestHandler):
     recognizer = None
 
     def do_PUT(self):
-        print self.headers
+        start = time.time()
         if 'Content-Type' not in self.headers or self.headers['Content-Type'] not in ["image/jpeg", "image/jpg"]:
             print "we only accept image/jpeg types"
             self.send_response(500)
             return
         length = int(self.headers['Content-Length'])
-        d = self.rfile.read(length)
+        self.send_response(204) # Return early response
+
         image_name = str(uuid.uuid4()) + ".jpg"
+        if 'Filename' in self.headers:
+            image_name = self.headers['Fil']
+        d = self.rfile.read(length)
         with open(image_name, 'wb') as fh:
             fh.write(d)
         content = cv2.imread(image_name)
         names = self.recognizer.recognize(content, content)
-        print names
         remove(image_name)
-        self.send_response(204)
+        print names
+        end = time.time()
+
+        print ('elapsed time %d' % (end - start))
 
 
 def run_on(addr, port):

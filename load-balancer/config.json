@@ -1,7 +1,10 @@
 {
   "port": 8082,
   "hosts": [
-    "192.168.1.142:8080",
-    "localhost:8080"
+    "pi3.local:8080",
+    "raspberrypi.local:8080",
+    "raspberrypi1.local:8080",
+    "raspberrypi2.local:8080",
+    "raspberrypi3.local:8080"
   ]
 }

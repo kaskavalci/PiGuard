@@ -10,8 +10,8 @@ run:
 		-d \
 		--restart=unless-stopped \
 		-p 8080:8080 \
-		-v known_images:/recognizer/known_images \
-		-v images:/recognizer/images \
+		-v `pwd`/known_images:/recognizer/known_images \
+		-v `pwd/images:/recognizer/images \
 		recognizer
 
 get:

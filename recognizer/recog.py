@@ -51,6 +51,8 @@ class Recognizer():
             image_dir = path.join(images_dir, name)
             if not path.exists(image_dir):
                 makedirs(image_dir)
+                print('created %s' % image_dir)
+        print('finished initialization of Recognizer')
 
     def upload(self, filename, filepath, image):
         # Create an S3 client
@@ -85,7 +87,7 @@ class Recognizer():
 
         # move to recognized or unknown folder
         image_path = path.join(images_dir, recognized_face, image_name)
-        rename(image_name, image_path)
+        rename(path.join(images_dir, image_name), image_path)
         # end of algorithm. no need to track uploading time
         elapsed = str(time.time() - start)
 
@@ -120,10 +122,11 @@ class PUTHandler(BaseHTTPRequestHandler):
         image_name = str(uuid.uuid4()) + ".jpg"
         if 'Filename' in self.headers:
             image_name = self.headers['Filename']
+        image_path = path.join(images_dir, image_name)
         d = self.rfile.read(length)
-        with open(image_name, 'wb') as fh:
+        with open(image_path, 'wb') as fh:
             fh.write(d)
-        content = cv2.imread(image_name)
+        content = cv2.imread(image_path)
         names = self.recognizer.recognize(image_name, content, content)
         print names
 

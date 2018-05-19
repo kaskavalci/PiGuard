@@ -11,10 +11,9 @@ run:
 		--restart=unless-stopped \
 		-p 8080:8080 \
 		-v known_images:/recognizer/known_images \
-		-v unrecognized:/recognizer/unrecognized \
+		-v images:/recognizer/images \
 		recognizer
 
 get:
 	mkdir -p ./known_images
-	mkdir -p ./unrecognized
 	aws s3 cp s3://known-faces ./known_images/ --recursive

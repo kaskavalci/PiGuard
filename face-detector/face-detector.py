@@ -210,16 +210,16 @@ class FaceTracker:
             if self.__args.showface:
                 cv2.imshow('face', crop)
             if self.__args.upload:
-
+                # TODO: use pickle
                 if not self.__args.saveface:
                     cv2.imwrite(fname, crop)
                 with open(fname) as fh:
-                    logging.info('sending data to client')
+                    logging.info('sending %s to host' % fname)
                     mydata = fh.read()
                     try:
-                        response = requests.put('http://192.168.1.129:8082/',
+                        response = requests.put(self.__args.host,
                                                 data=mydata,
-                                                headers={'content-type': 'image/jpeg'},
+                                                headers={'content-type': 'image/jpeg', 'Filename': fname},
                                                 )
                         if response.status_code != 204:
                             logging.error('failed to send picture to server: {}'.format(response.content))
@@ -244,8 +244,6 @@ class FaceTracker:
         if len(faces) == 0:
             return False
         self.Face = faces[0]
-        # Recognize face now
-        # TODO: upload to aws
 
         return True
 
@@ -267,6 +265,7 @@ if __name__ == '__main__':
     parser.add_argument('--save-face', action='store_true', dest='saveface', default=False)
     parser.add_argument('--save-image', action='store_true', dest='saveimage', default=False)
     parser.add_argument('--upload', action='store_true', dest='upload', default=False)
+    parser.add_argument('--host', action='store', dest='host', default='http://192.168.1.129:8082/')
     parser.add_argument('--show-face', action='store_true', dest='showface', default=False)
     parser.add_argument('--show-image', action='store_true', dest='showimage', default=False)
     parser.add_argument('--min-area', type=int, dest='minarea', default=600)

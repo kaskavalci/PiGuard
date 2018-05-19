@@ -5,4 +5,5 @@ RUN pip install requests face_recognition boto3
 ADD . /recognizer
 WORKDIR /recognizer
 
-CMD ["./recog.py"]
+ENTRYPOINT [ "python", "./recog.py" ]
+CMD ["--upload"]

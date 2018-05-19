@@ -17,3 +17,6 @@ run:
 get:
 	mkdir -p ./known_images
 	aws s3 cp s3://known-faces ./known_images/ --recursive
+
+install-dep:
+	pip install --upgrade --user -r requirements.txt

@@ -77,7 +77,6 @@ class FaceTracker:
             self.__camLock.acquire()
             self.__vcap.grab()
             self.__camLock.release()
-            logging.debug('grabbed frame {}'.format(i))
             i += 1
 
         logging.info('grab thread finished')
@@ -204,7 +203,7 @@ class FaceTracker:
             (x, y, w, h) = expanded
             crop = img[y: y + h + 100, x: x + w + 100]
             date = datetime.datetime.now()
-            fname = date.isoformat()
+            fname = date.isoformat() + '.jpg'
             fpath = 'images/' + fname
             if self.__args.saveface:
                 cv2.imwrite(fpath, crop)

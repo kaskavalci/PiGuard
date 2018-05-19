@@ -204,22 +204,24 @@ class FaceTracker:
             (x, y, w, h) = expanded
             crop = img[y: y + h + 100, x: x + w + 100]
             date = datetime.datetime.now()
-            fname = 'images/{}.jpg'.format(date.isoformat())
+            fname = date.isoformat()
+            fpath = 'images/' + fname
             if self.__args.saveface:
-                cv2.imwrite(fname, crop)
+                cv2.imwrite(fpath, crop)
             if self.__args.showface:
                 cv2.imshow('face', crop)
             if self.__args.upload:
                 # TODO: use pickle
                 if not self.__args.saveface:
-                    cv2.imwrite(fname, crop)
-                with open(fname) as fh:
+                    cv2.imwrite(fpath, crop)
+                with open(fpath) as fh:
                     logging.info('sending %s to host' % fname)
                     mydata = fh.read()
                     try:
                         response = requests.put(self.__args.host,
                                                 data=mydata,
-                                                headers={'content-type': 'image/jpeg', 'Filename': fname},
+                                                headers={
+                                                    'content-type': 'image/jpeg', 'Filename': fname},
                                                 )
                         if response.status_code != 204:
                             logging.error('failed to send picture to server: {}'.format(response.content))

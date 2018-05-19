@@ -4,7 +4,7 @@
 run:
 	docker run \
 	    -d \
-	    --restart=unless-stopped \
+		--restart=unless-stopped \
 		-v `pwd`/images:/face-detector/images \
 		face-detector
 

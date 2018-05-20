@@ -198,10 +198,14 @@ class FaceTracker:
             return
 
         for face in faces:
-            expanded = self.expand_face(face)
-            logging.info("exanped: " + str(expanded))
-            (x, y, w, h) = expanded
-            crop = img[y: y + h + 100, x: x + w + 100]
+            crop = None
+            if self.__args.expand:
+                expanded = self.expand_face(face)
+                logging.info("exanped: " + str(expanded))
+                (x, y, w, h) = expanded
+                crop = img[y: y + h + 100, x: x + w + 100]
+            else:
+                crop = self.crop(img, face)
             date = datetime.datetime.now()
             fname = date.isoformat() + '.jpg'
             fpath = 'images/' + fname
@@ -270,6 +274,7 @@ if __name__ == '__main__':
     parser.add_argument('--show-face', action='store_true', dest='showface', default=False)
     parser.add_argument('--show-image', action='store_true', dest='showimage', default=False)
     parser.add_argument('--min-area', type=int, dest='minarea', default=600)
+    parser.add_argument('--expand-face', action='store_true', dest='expand', default=False)
 
 
     args = parser.parse_args()

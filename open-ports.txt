@@ -1,6 +1,0 @@
-80/tcp    open  http
-554/tcp   open  rtsp
-8899/tcp  open  ospf-lite
-9527/tcp  open  unknown
-9530/tcp  open  unknown
-34567/tcp open  dhanalakshmi

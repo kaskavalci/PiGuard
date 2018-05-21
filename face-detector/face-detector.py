@@ -31,7 +31,6 @@ Requires:
 
 class FaceTracker:
     Face = None
-    Tracker = None
     __faceCascade = None
     __eyesCascade = None
     __expand = (-50, -50, 50, 50)
@@ -42,14 +41,11 @@ class FaceTracker:
     __camLock = threading.Lock()
     __previousFrame = None
 
-    def __init__(self, args, tracker=None, faceCascade=None, eyesCascade=None):
+    def __init__(self, args, faceCascade=None, eyesCascade=None):
         self.__args = args
 
         logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
 
-        if tracker is None:
-            self.Tracker = cv2.Tracker_create("KCF")
-            # self.Tracker = cv2.TrackerKCF_create()
         if faceCascade is None:
             self.__faceCascade = cv2.CascadeClassifier('haarcascade_frontalface_alt.xml')
         if eyesCascade is None:
@@ -231,8 +227,6 @@ class FaceTracker:
                     except:
                         print("web server is not available")
 
-                    # img = cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
-
         return faces
 
     def expand_face(self, bbox):
@@ -244,27 +238,11 @@ class FaceTracker:
 
         return tuple(updated)
 
-    def init_tracker(self, frame):
-        faces = self.find_faces(frame)
-        if len(faces) == 0:
-            return False
-        self.Face = faces[0]
-
-        return True
-
     def crop(self, frame, bbox):
         return frame[int(bbox[1]): int(bbox[1]) + int(bbox[3]), int(bbox[0]): int(bbox[0]) + int(bbox[2])]
 
-    def rectangle_face(self, frame):
-        if self.Face is None:
-            return
-        p1 = (int(self.Face[0]), int(self.Face[1]))
-        p2 = (int(self.Face[0] + self.Face[2]), int(self.Face[1] + self.Face[3]))
-        cv2.rectangle(frame, p1, p2, (0,0,255))
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Face Tracker')
-    # parser.add_argument('--webcam', action='store_false', dest='webcam', default=True)
     parser.add_argument('--ipcam', action='store_true', dest='ipcam', default=False)
     parser.add_argument('--cache', action='store_true', dest='cache', default=False)
     parser.add_argument('--save-face', action='store_true', dest='saveface', default=False)
@@ -275,7 +253,6 @@ if __name__ == '__main__':
     parser.add_argument('--show-image', action='store_true', dest='showimage', default=False)
     parser.add_argument('--min-area', type=int, dest='minarea', default=600)
     parser.add_argument('--expand-face', action='store_true', dest='expand', default=False)
-
 
     args = parser.parse_args()
 
@@ -288,8 +265,3 @@ if __name__ == '__main__':
                 sys.exit(0)
             except SystemExit:
                 os._exit(0)
-
-    # try:
-    #     faceTracker.run()
-    # except Exception as e:
-    #     print 'Failed {}'.format(e.message)

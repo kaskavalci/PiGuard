@@ -1,1 +1,4 @@
 awscli
+future
+face_recognition
+imutils

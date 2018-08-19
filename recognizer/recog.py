@@ -13,8 +13,10 @@ import socket
 import time
 import datetime
 import argparse
-from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+import future
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
+import pickle
 
 # AWS Credentials
 AWS_ACCESS_KEY_ID = getenv('AWS_ACCESS_KEY_ID')
@@ -30,28 +32,24 @@ class Recognizer():
     _args = None
     # Initialize some variables
     known_images_encoding = []
-    names = []
     _table = None
+    _face_encodings = None
 
     def __init__(self, args):
         self._args = args
         self._table = boto3.resource('dynamodb', region_name=AWS_REGION).Table(args.table)
-        # Load known pictures
-        known_images_path = known_faces_dir
         unknown_dir = path.join(images_dir, unknown)
         if not path.exists(unknown_dir):
             makedirs(unknown_dir)
 
-        for f in listdir(known_images_path):
-            name = f[:len(f)-4]
-            print name
-            self.names.append(name)
-            image = face_recognition.load_image_file(path.join(known_images_path, f))
-            self.known_images_encoding.append(face_recognition.face_encodings(image)[0])
+        # Load known pictures
+        self._face_encodings = pickle.loads(open("encodings.pickle", "rb").read())
+        for name in self._face_encodings["names"]:
             image_dir = path.join(images_dir, name)
             if not path.exists(image_dir):
                 makedirs(image_dir)
                 print('created %s' % image_dir)
+
         print('finished initialization of Recognizer')
 
     def upload(self, filename, filepath, image):
@@ -70,17 +68,16 @@ class Recognizer():
     def recognize(self, image_name, frame, small_frame):
         start = time.time()
         # Find all the faces and face encodings in the current frame of video
-        face_encodings = face_recognition.face_encodings(small_frame)
+        encodings = face_recognition.face_encodings(small_frame)
 
         recognized_face = unknown
-        for face_encoding in face_encodings:
+        for face_encoding in encodings:
             # See if the face is a match for the known face(s)
-            match = face_recognition.compare_faces(self.known_images_encoding, face_encoding)
+            match = face_recognition.compare_faces(self._face_encodings["encodings"], face_encoding)
 
-            print match
             for i, m in enumerate(match):
                 if m:
-                    recognized_face = self.names[i]
+                    recognized_face = self._face_encodings["names"][i]
             if recognized_face != unknown:
                 break
             # face_names.append(name)
@@ -114,21 +111,21 @@ class PUTHandler(BaseHTTPRequestHandler):
 
     def do_PUT(self):
         if 'Content-Type' not in self.headers or self.headers['Content-Type'] not in ["image/jpeg", "image/jpg"]:
-            print "we only accept image/jpeg types"
+            print ("we only accept image/jpeg types")
             self.send_response(500)
             return
-        length = int(self.headers['Content-Length'])
         self.send_response(204) # Return early response
         image_name = str(uuid.uuid4()) + ".jpg"
         if 'Filename' in self.headers:
             image_name = self.headers['Filename']
         image_path = path.join(images_dir, image_name)
-        d = self.rfile.read(length)
-        with open(image_path, 'wb') as fh:
-            fh.write(d)
-        content = cv2.imread(image_path)
+        d = self.rfile.read(int(self.headers['Content-Length']))
+        # load pickle content
+        content = pickle.loads(d)
+        # save image for later use
+        cv2.imwrite(image_path, content)
         names = self.recognizer.recognize(image_name, content, content)
-        print names
+        print("recognized %s" % names)
 
 
 def run_on(addr, port, args):

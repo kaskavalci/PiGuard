@@ -24,7 +24,7 @@ def load(args):
                 gray,
                 scaleFactor=1.1,
                 minNeighbors=5,
-                minSize=(40, 40),
+                minSize=(100, 1000),
                 flags=cv2.CASCADE_SCALE_IMAGE
             )
             i = 0

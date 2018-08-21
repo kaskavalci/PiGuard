@@ -4,4 +4,6 @@ opencv-python
 opencv-contrib-python
 requests
 face_recognition
+pickle
 boto3
+future

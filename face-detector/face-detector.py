@@ -18,6 +18,7 @@ import datetime
 import threading
 import logging
 import requests
+import pickle
 
 """
 Examples of objects for image frame aquisition from both IP and
@@ -120,6 +121,8 @@ class FaceTracker:
                 url = "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1.sdp"
             self.__vcap = cv2.VideoCapture(url)
             logging.info('IPcam set to {}'.format(url))
+        elif self.__args.video != '':
+            self.__vcap = cv2.VideoCapture(self.__args.video)
         else:
             self.__vcap = cv2.VideoCapture(0)
             logging.info('using webcam')
@@ -160,8 +163,8 @@ class FaceTracker:
                 logging.info('failed to get image {} times'.format(fail_count))
                 fail_count = 0
 
-            img = cv2.resize(frame, (1024, 600))
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = cv2.resize(frame, (1024, 768))
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             if self.__args.showimage:
                 cv2.imshow('img', frame)
@@ -169,10 +172,6 @@ class FaceTracker:
             if not self.isThereMotion(gray):
                 motionless_count += 1
                 continue
-
-            if self.__args.saveimage:
-                date = datetime.datetime.now()
-                cv2.imwrite('images/i_{}.jpg'.format(date.isoformat()), frame)
 
             faces = self.find_faces(gray)
             if faces is not None:
@@ -182,11 +181,18 @@ class FaceTracker:
                 break
 
     def find_faces(self, img):
+
+        date = datetime.datetime.now()
+
+        if self.__args.saveimage:
+            fname = 'i_{}.jpg'.format(date.isoformat())
+            cv2.imwrite(os.path.join('images', fname), img)
+
         faces = self.__faceCascade.detectMultiScale(
             img,
             scaleFactor=1.1,
             minNeighbors=5,
-            minSize=(30, 30),
+            minSize=(100, 100),
             flags=cv2.CASCADE_SCALE_IMAGE
         )
 
@@ -194,40 +200,36 @@ class FaceTracker:
             return
 
         for face in faces:
-            crop = None
+            crop = self.crop(img, face)
             if self.__args.expand:
                 expanded = self.expand_face(face)
                 logging.info("exanped: " + str(expanded))
                 (x, y, w, h) = expanded
                 crop = img[y: y + h + 100, x: x + w + 100]
-            else:
-                crop = self.crop(img, face)
-            date = datetime.datetime.now()
             fname = date.isoformat() + '.jpg'
-            fpath = 'images/' + fname
+            fpath = os.path.join('images', fname)
             if self.__args.saveface:
                 cv2.imwrite(fpath, crop)
             if self.__args.showface:
                 cv2.imshow('face', crop)
             if self.__args.upload:
-                # TODO: use pickle
-                if not self.__args.saveface:
-                    cv2.imwrite(fpath, crop)
-                with open(fpath) as fh:
-                    logging.info('sending %s to host' % fname)
-                    mydata = fh.read()
-                    try:
-                        response = requests.put(self.__args.host,
-                                                data=mydata,
-                                                headers={
-                                                    'content-type': 'image/jpeg', 'Filename': fname},
-                                                )
-                        if response.status_code != 204:
-                            logging.error('failed to send picture to server: {}'.format(response.content))
-                    except:
-                        print("web server is not available")
+                self.upload(img, fname)
 
         return faces
+
+    def upload(self, picture, fname):
+        try:
+            _, img_encoded = cv2.imencode('.jpg', picture)
+            response = requests.put(self.__args.host,
+                                    data=pickle.dumps(img_encoded),
+                                    headers={
+                                        'content-type': 'image/jpeg', 'Filename': fname},
+                                    )
+            if response.status_code != 204:
+                logging.error(
+                    'failed to send picture to server: {}'.format(response.content))
+        except:
+            print("web server is not available")
 
     def expand_face(self, bbox):
         updated = list(map(operator.add, bbox, self.__expand))
@@ -244,6 +246,7 @@ class FaceTracker:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Face Tracker')
     parser.add_argument('--ipcam', action='store_true', dest='ipcam', default=False)
+    parser.add_argument('--video', action='store', dest='video', default='', help='Use a video input instead of a camera')
     parser.add_argument('--cache', action='store_true', dest='cache', default=False)
     parser.add_argument('--save-face', action='store_true', dest='saveface', default=False)
     parser.add_argument('--save-image', action='store_true', dest='saveimage', default=False)

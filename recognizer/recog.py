@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import face_recognition
 import cv2
 from os import listdir
@@ -23,8 +21,11 @@ AWS_ACCESS_KEY_ID = getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = getenv('AWS_SECRET_ACCESS_KEY')
 AWS_REGION = getenv('AWS_DEFAULT_REGION', 'eu-west-1')
 
+# Face encodings
+AWS_FACE_ENCODINGS_BUCKET = "encodings"
+face_encodings_pickle = "encodings.pickle"
+
 # Path variables
-known_faces_dir = 'known_images'
 unknown = 'unknown'
 images_dir = 'images'
 
@@ -43,6 +44,9 @@ class Recognizer():
             makedirs(unknown_dir)
 
         # Load known pictures
+        if not path.isfile(face_encodings_pickle):
+            self.download(path.join(AWS_FACE_ENCODINGS_BUCKET, face_encodings_pickle), face_encodings_pickle)
+
         self._face_encodings = pickle.loads(open("encodings.pickle", "rb").read())
         for name in self._face_encodings["names"]:
             image_dir = path.join(images_dir, name)
@@ -51,6 +55,16 @@ class Recognizer():
                 print('created %s' % image_dir)
 
         print('finished initialization of Recognizer')
+
+    def download(self, src, dst):
+        # Create an S3 client
+        print('downloading %s' % src)
+        s3 = boto3.client('s3',
+                          aws_access_key_id=AWS_ACCESS_KEY_ID,
+                          aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+                          region_name=AWS_REGION)
+
+        s3.download_file(self._args.s3_bucket, src, dst)
 
     def upload(self, filename, filepath, image):
         # Create an S3 client

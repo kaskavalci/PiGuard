@@ -6,3 +6,5 @@ images
 .vscode
 unrecognized
 ignored
+encodings.pickle
+*.mov

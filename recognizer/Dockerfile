@@ -1,6 +1,6 @@
-FROM rickryan/rpi-jessie-opencv3.2
+FROM kaskavalci/face_recognition
 
-RUN pip install requests face_recognition boto3 future
+RUN pip install requests boto3 future
 
 ADD . /recognizer
 WORKDIR /recognizer

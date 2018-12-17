@@ -116,7 +116,8 @@ class FaceTracker:
         logging.info('initing camera')
         if self.__args.ipcam:
             if self.__args.cache:
-                url = "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1.sdp?real_stream--rtp-caching=100"
+                url = "rtsp://192.168.1.10:554/" \
+                "user=admin&password=&channel=1&stream=1.sdp?real_stream--rtp-caching=100"
             else:
                 url = "rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=1.sdp"
             self.__vcap = cv2.VideoCapture(url)

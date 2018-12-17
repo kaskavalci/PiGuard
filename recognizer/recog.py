@@ -87,7 +87,9 @@ class Recognizer():
         recognized_face = unknown
         for face_encoding in encodings:
             # See if the face is a match for the known face(s)
-            match = face_recognition.compare_faces(self._face_encodings["encodings"], face_encoding)
+            match = face_recognition.compare_faces(
+                self._face_encodings["encodings"],
+                face_encoding, 0.6)
 
             for i, m in enumerate(match):
                 if m:

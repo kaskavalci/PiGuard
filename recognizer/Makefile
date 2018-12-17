@@ -13,6 +13,9 @@ run:
 		-v `pwd`/known_images:/recognizer/known_images \
 		-v `pwd`/images:/recognizer/images \
 		recognizer
+		--upload
+		--dynamo-table 082018-status
+		--s3 082018-bucket
 
 get:
 	mkdir -p ./known_images

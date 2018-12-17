@@ -1,7 +1,7 @@
 .PHONY: run build
 .DEFAULT_GOAL := run
 
-run:
+run: build
 	docker run \
 	    -d \
 	    --restart=unless-stopped \

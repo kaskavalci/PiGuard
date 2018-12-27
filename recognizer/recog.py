@@ -138,12 +138,11 @@ class PUTHandler(BaseHTTPRequestHandler):
         d = self.rfile.read(int(self.headers['Content-Length']))
         # load pickle content
         content = pickle.loads(d)
-        # decode image
-        gray = cv2.imdecode(content, cv2.IMREAD_COLOR)
-        # save image for later use
-        cv2.imwrite(image_path, gray)
 
-        names = self.recognizer.recognize(image_name, content, gray)
+        # save image for later use
+        cv2.imwrite(image_path, content)
+
+        names = self.recognizer.recognize(image_name, content, content)
         print("recognized %s" % names)
 
 

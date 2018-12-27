@@ -130,6 +130,7 @@ class PUTHandler(BaseHTTPRequestHandler):
             print ("we only accept image/jpeg types")
             self.send_response(500)
             return
+        d = self.rfile.read(int(self.headers['Content-Length']))
         self.send_response(204) # Return early response
         self.end_headers()
 
@@ -137,7 +138,7 @@ class PUTHandler(BaseHTTPRequestHandler):
         if 'Filename' in self.headers:
             image_name = self.headers['Filename']
         image_path = path.join(images_dir, image_name)
-        d = self.rfile.read(int(self.headers['Content-Length']))
+
         # load pickle content
         content = pickle.loads(d)
 

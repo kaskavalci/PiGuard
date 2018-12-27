@@ -20,7 +20,7 @@ def upload(args):
                              headers={
                                  'content-type': 'image/jpeg',
                                  'Filename': filename})
-            if r.status_code == 200:
+            if r.status_code == 204:
                 print "success!"
             else:
                 print r.text

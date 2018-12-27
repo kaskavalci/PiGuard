@@ -131,6 +131,8 @@ class PUTHandler(BaseHTTPRequestHandler):
             self.send_response(500)
             return
         self.send_response(204) # Return early response
+        self.end_headers()
+
         image_name = str(uuid.uuid4()) + ".jpg"
         if 'Filename' in self.headers:
             image_name = self.headers['Filename']

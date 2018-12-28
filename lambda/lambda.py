@@ -47,7 +47,7 @@ def index_faces(bucket, key):
 
 
 def compare_faces(bucket, key, source):
-    response = rekognition.compare_faces(SimilarityThreshold=80,
+    response = rekognition.compare_faces(SimilarityThreshold=60,
                                          SourceImage={"S3Object": {
                                              "Bucket": "known-faces", "Name": source}},
                                          TargetImage={'S3Object': {'Bucket': bucket, 'Name': key}})
@@ -64,7 +64,7 @@ def lambda_handler(event, context):
     '''
     startTime = time.time()
     table = boto3.resource(
-        'dynamodb', region_name='eu-west-1').Table('local-stats')
+        'dynamodb', region_name='eu-west-1').Table('082018-status')
     #print("Received event: " + json.dumps(event, indent=2))
 
     # Get the object from the event
@@ -89,40 +89,36 @@ def lambda_handler(event, context):
 
         # Compare face
         # Names
-        # TOOD read it from S3
-        names = {"aysenur": 0, "halil": 0}
+        confidence = {"aysenur": 0, "halil": 0}
         responses = []
-        detectedFace = {}
-        faceLabel = 'unknown'
-        for name, confidence in names.iteritems():
+        for name in confidence:
             print("checking " + name)
             source = name + '.jpg'
             print('key %s source %s' % (key, source))
             response = compare_faces(bucket, key, source)
             if len(response["FaceMatches"]) > 0:
-                confidence = response["FaceMatches"][0]["Similarity"]
-                detectedFace = response["FaceMatches"][0]
+                confidence[name] = response["FaceMatches"][0]["Similarity"]
                 print("detected " + name)
-                faceLabel = name
-                break
             else:
                 print("nope, it's not " + name)
 
-        if len(detectedFace) == 0:
-            print("cannot recognize " + key)
+        print(confidence)
 
         table_update_response = table.update_item(
             Key={
                 'filename': key
             },
-            UpdateExpression='SET duration_lambda = :dur, result_lambda = :result',
+            UpdateExpression='SET lambda_duration = :dur, lambda_halil = :lambdaHalil, lambda_aysenur = :lambdaAysenur',
             ExpressionAttributeValues={
                 ':dur': str(time.time() - startTime),
-                ':result': faceLabel
+                ':lambdaHalil': str(confidence['halil']),
+                ':lambdaAysenur': str(confidence['aysenur'])
             }
         )
-        print(table_update_response)
-        return detectedFace
+        # print(table_update_response)
+
+        return confidence
+
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == 'InvalidParameterException':
             print('failed to find face ' + e.response['Error']['Message'])
@@ -137,8 +133,8 @@ def lambda_handler(event, context):
                 }
             )
         else:
-            print("boto returned error: " + str(e))
+            print("you fucked up 2: " + str(e))
             raise e
     except Exception as e:
-        print("cought exception during the process: " + str(e))
+        print("you fucked up: " + str(e))
         raise e

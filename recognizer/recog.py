@@ -15,6 +15,7 @@ import future
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 import pickle
+import json
 
 # AWS Credentials
 AWS_ACCESS_KEY_ID = getenv('AWS_ACCESS_KEY_ID')
@@ -96,6 +97,7 @@ class Recognizer():
         encodings = face_recognition.face_encodings(small_frame)
 
         recognized_faces = dict(self._recognized_names)
+        matchedFiles = []
 
         for face_encoding in encodings:
             # See if the face is a match for the known face(s)
@@ -105,7 +107,8 @@ class Recognizer():
 
             for i, m in enumerate(match):
                 name = self._face_encodings["names"][i]
-                if m and not recognized_faces[name]:
+                if m:
+                    matchedFiles.append(self._face_encodings["files"][i])
                     recognized_faces[name] = True
 
         # end of algorithm. no need to track uploading time
@@ -126,7 +129,8 @@ class Recognizer():
         db_row = {
             'filename': image_name,
             'created': str(datetime.datetime.utcnow()),
-            'duration': elapsed
+            'duration': elapsed,
+            'matchedFiles': json.dumps(matchedFiles)
         }
 
         for name, result in recognized_faces.iteritems():
@@ -153,6 +157,7 @@ class PUTHandler(BaseHTTPRequestHandler):
         image_name = str(uuid.uuid4()) + ".jpg"
         if 'Filename' in self.headers:
             image_name = self.headers['Filename']
+        print("received file %s" % image_name)
         image_path = path.join(images_dir, image_name)
 
         # load pickle content

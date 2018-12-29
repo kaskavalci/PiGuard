@@ -13,6 +13,7 @@ def upload(args):
 
     for filename in os.listdir(args.dir):
         print filename
+        start = time.time()
         if filename.endswith(".jpg") or filename.endswith(".jpeg"):
             img = cv2.imread(join(args.dir, filename))
             r = requests.put(args.addr,
@@ -25,7 +26,8 @@ def upload(args):
             else:
                 print r.text
 
-        time.sleep(1)
+        elapsed = str(time.time() - start)
+        print("Elapsed: %s" % elapsed)
 
 
 if __name__ == '__main__':

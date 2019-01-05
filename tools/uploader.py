@@ -7,9 +7,12 @@ import requests
 import pickle
 import argparse
 from os.path import join
+import json
 
 
 def upload(args):
+
+    stats = {}
 
     for filename in os.listdir(args.dir):
         print filename
@@ -26,9 +29,12 @@ def upload(args):
             else:
                 print r.text
 
-        elapsed = str(time.time() - start)
-        print("Elapsed: %s" % elapsed)
+        elapsed = time.time() - start
+        stats[filename] = elapsed
+        print("Elapsed: %s" % str(elapsed))
 
+    with open("stats.json", "w") as f:
+        f.write(json.dumps(stats))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

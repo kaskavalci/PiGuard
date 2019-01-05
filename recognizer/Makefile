@@ -14,7 +14,7 @@ run:
 		-v `pwd`/images:/recognizer/images \
 		recognizer \
 		--upload \
-		--dynamo-table 082018-status \
+		--dynamo-table ${DYNAMOTABLE} \
 		--s3 082018-bucket
 
 get:

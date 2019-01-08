@@ -9,32 +9,42 @@ import argparse
 from os.path import join
 import json
 
+def process(args):
 
-def upload(args):
+    if os.path.isfile(args.dir):
+        filename = args.dir
+        start = time.time()
+        upload(filename)
+        elapsed = time.time() - start
+        print("%s - Elapsed: %s" % (filename, str(elapsed)))
+        return
 
     stats = {}
 
     for filename in os.listdir(args.dir):
-        print filename
         start = time.time()
-        if filename.endswith(".jpg") or filename.endswith(".jpeg"):
-            img = cv2.imread(join(args.dir, filename))
-            r = requests.put(args.addr,
-                             pickle.dumps(img),
-                             headers={
-                                 'content-type': 'image/jpeg',
-                                 'Filename': filename})
-            if r.status_code == 204:
-                print "success!"
-            else:
-                print r.text
+
+        upload(filename)
 
         elapsed = time.time() - start
         stats[filename] = elapsed
-        print("Elapsed: %s" % str(elapsed))
+        print("%s - Elapsed: %s" % (filename, str(elapsed)))
 
     with open("stats.json", "w") as f:
         f.write(json.dumps(stats))
+
+def upload(filename):
+    if filename.endswith(".jpg") or filename.endswith(".jpeg"):
+        img = cv2.imread(join(args.dir, filename))
+        r = requests.put(args.addr,
+                            pickle.dumps(img),
+                            headers={
+                                'content-type': 'image/jpeg',
+                                'Filename': filename})
+        if r.status_code == 204:
+            print "success!"
+        else:
+            print r.text
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -44,4 +54,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    upload(args)
+    process(args)

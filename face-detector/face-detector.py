@@ -189,11 +189,15 @@ class FaceTracker:
             fname = 'i_{}.jpg'.format(date.isoformat())
             cv2.imwrite(os.path.join('images', fname), img)
 
+# First window: (20*20 | 300*300) is capable of 4 meters distance,
+# Second window (50*50 | 250*250) can detect 3.7 meters
+# Third window (80*80 | 200*200) detects 3 meters away.
         faces = self.__faceCascade.detectMultiScale(
             img,
             scaleFactor=1.1,
             minNeighbors=5,
-            minSize=(100, 100),
+            minSize=(20, 20),
+            maxSize=(300, 300),
             flags=cv2.CASCADE_SCALE_IMAGE
         )
 

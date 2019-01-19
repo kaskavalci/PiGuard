@@ -16,6 +16,9 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 import pickle
 import json
+import operator
+from pprint import pprint
+import math
 
 # AWS Credentials
 AWS_ACCESS_KEY_ID = getenv('AWS_ACCESS_KEY_ID')
@@ -29,7 +32,6 @@ face_encodings_pickle = "encodings.pickle"
 # Path variables
 unknown = 'unknown'
 images_dir = 'images'
-
 
 class Recognizer():
     _args = None
@@ -68,6 +70,43 @@ class Recognizer():
 
         print('finished initialization of Recognizer')
 
+
+    # Taken from https://github.com/ageitgey/face_recognition/issues/707
+    def face_distance_to_conf(self, face_distance, face_match_threshold=0.6):
+        if face_distance > face_match_threshold:
+            range = (1.0 - face_match_threshold)
+            linear_val = (1.0 - face_distance) / (range * 2.0)
+            return linear_val
+        else:
+            range = face_match_threshold
+            linear_val = 1.0 - (face_distance / (range * 2.0))
+            return linear_val + ((1.0 - linear_val) * math.pow((linear_val - 0.5) * 2, 0.2))
+
+    # This is not exactly confience but an approximation to it.
+    # Open issue remains to use SVN instead of KNN to gather confidence level with matches
+    # https://github.com/ageitgey/face_recognition/issues/653
+
+    def printConfidence(self, face_encoding):
+        res = list(face_recognition.face_distance(
+            self._face_encodings["encodings"],
+            face_encoding))
+
+        resMap = {}
+
+        for i, r in enumerate(res):
+            resMap[self._face_encodings["files"][i]
+                ] = "%f - %f" % (self.face_distance_to_conf(r, 0.5), r)
+            # print("%s - %f" % (self._face_encodings["files"][i], 1-r))
+
+        sorted_x = sorted(resMap.items(), key=operator.itemgetter(1), reverse=True)
+
+        maxItems = 5
+        for f, confidence in sorted_x:
+            print("%s - %s" % (f, confidence))
+            maxItems -= 1
+            if maxItems == 0:
+                break
+
     def download(self, src, dst):
         # Create an S3 client
         print('downloading %s' % src)
@@ -103,7 +142,10 @@ class Recognizer():
             # See if the face is a match for the known face(s)
             match = face_recognition.compare_faces(
                 self._face_encodings["encodings"],
-                face_encoding, 0.6)
+                face_encoding, 0.5)
+
+            if self._args.verbose:
+                self.printConfidence(face_encoding)
 
             for i, m in enumerate(match):
                 name = self._face_encodings["names"][i]
@@ -183,6 +225,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Face Tracker')
     parser.add_argument('--upload', action='store_true',
                         dest='upload', default=False)
+    parser.add_argument('--verbose', action='store_true',
+                        dest='verbose', default=False)
     parser.add_argument('--host', action='store',
                         dest='host', default=socket.gethostname())
     parser.add_argument('--s3', action='store',
